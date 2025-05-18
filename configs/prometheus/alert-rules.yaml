@@ -1,0 +1,37 @@
+groups:
+  - name: example
+    rules:
+      - alert: service_down
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 30 seconds."
+
+      - alert: many_errors
+        expr: sum(increase(http_requests_total{status=~"5.."}[5m])) by (method, path) > 5
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of server errors (status=5XX)"
+          description: "{{ $value }} requests with status 5XX in the last 5 minutes for {{ $labels.method }} {{ $labels.path }}"
+
+      - alert: many_warnings
+        expr: sum(increase(http_requests_total{status=~"4.."}[5m])) by (method, path) > 20
+        labels:
+          severity: warning
+        annotations:
+          summary: "High rate of client errors (status=4XX)"
+          description: "{{ $value }} client error requests (4XX) in the last 5 minutes for {{ $labels.method }} {{ $labels.path }}"
+
+      - alert: high_latency
+        expr: sum (rate(http_request_duration_seconds_sum[1m])) by(method, path) / sum (rate(http_request_duration_seconds_count[1m])) by(method, path) > 10
+        for: 30s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High average request latency for {{ $labels.method }} {{ $labels.path }}"
+          description: "Average latency of {{ $value | humanizeDuration }} for {{ $labels.method }} {{ $labels.path }}"
+

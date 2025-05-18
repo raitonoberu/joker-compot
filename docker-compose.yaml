@@ -1,0 +1,66 @@
+services:
+  app:
+    build: ./app
+    container_name: app
+    ports:
+      - 8080:8080
+
+  prometheus:
+    image: prom/prometheus:v3.4.0
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yaml'
+    volumes:
+      - ./configs/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    container_name: grafana
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    volumes:
+      - ./configs/grafana/datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./configs/grafana/dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    container_name: alertmanager
+    ports:
+      - 9093:9093
+    command:
+      - '--config.file=/etc/alertmanager/config.yaml'
+    volumes:
+      - ./configs/alertmanager:/etc/alertmanager
+
+  loki:
+    image: grafana/loki:3.4.3
+    container_name: loki
+    ports:
+      - 3100:3100
+    command:
+      - '--config.file=/etc/loki/config.yaml'
+    volumes:
+      - ./configs/loki:/etc/loki
+      - loki_data:/loki
+
+  alloy:
+    image: grafana/alloy:v1.8.3
+    container_name: alloy
+    command: 'run /etc/alloy/config.alloy'
+    volumes:
+      - ./configs/alloy:/etc/alloy
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - loki
+
+volumes:
+  prometheus_data:
+  loki_data:
+
