@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace UsersService.Data;
+namespace UsersService.Data.Entities;
 
 public sealed class UserEntity
 {

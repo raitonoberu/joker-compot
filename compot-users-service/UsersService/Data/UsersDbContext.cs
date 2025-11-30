@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using UsersService.Data.Entities;
 
 namespace UsersService.Data;
 
-public sealed class AuthDbContext(DbContextOptions<AuthDbContext> options) : DbContext(options)
+public sealed class UsersDbContext(DbContextOptions<UsersDbContext> options) : DbContext(options)
 {
     public DbSet<UserEntity> Users => Set<UserEntity>();
 

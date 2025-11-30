@@ -11,7 +11,7 @@ using UsersService.Data;
 
 namespace UsersService.Migrations
 {
-    [DbContext(typeof(AuthDbContext))]
+    [DbContext(typeof(UsersDbContext))]
     [Migration("20251117182813_Initial")]
     partial class Initial
     {

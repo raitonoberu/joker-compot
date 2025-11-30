@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 namespace UsersService.Jwt;
 
-public sealed class JwtKeyStore
+public sealed class JwtKeyStore : IJwtKeyStore
 {
     public RSA Rsa => RSA.Create(2048);
 
