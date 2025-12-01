@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using OpenTelemetry.Metrics;
+using Serilog;
+using Serilog.Events;
 using UsersService.Data;
 using UsersService.Grpc;
 using UsersService.Jwt;
@@ -11,37 +13,27 @@ namespace UsersService;
 
 public static class Setup
 {
+    public static void MigrateDatabase(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<UsersDbContext>();
+        db.Database.Migrate();
+    }
+
     public static WebApplicationBuilder SetupAppServices(this WebApplicationBuilder builder)
     {
         builder.Services.AddGrpc();
+        builder.AddLogging();
 
         builder
             .Services
+            .AddTelemetry()
+            .AddHttpLogging()
             .AddScoped<IUsersRepository, UsersRepository>()
             .AddSingleton<IPasswordHasher, BcryptPasswordHasher>()
             .AddSingleton<IJwtKeyStore, JwtKeyStore>()
             .AddSingleton<IJwtTokenIssuer, JwtTokenIssuer>()
-            .AddDbContext<UsersDbContext>(o =>
-                                              o.UseNpgsql(builder.Configuration.GetConnectionString("Default"))
-            );
-
-        return builder;
-    }
-
-    public static WebApplicationBuilder SetupWebHost(this WebApplicationBuilder builder)
-    {
-        builder.WebHost.ConfigureKestrel(options =>
-            {
-                options.ListenAnyIP(
-                    42069,
-                    listenOptions =>
-                    {
-                        listenOptions.Protocols = HttpProtocols.Http2;
-                        listenOptions.UseConnectionLogging();
-                    }
-                );
-            }
-        );
+            .AddDbContext<UsersDbContext>(b => b.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
         return builder;
     }
@@ -64,10 +56,41 @@ public static class Setup
                     new RsaSecurityKey(keys.Rsa) { KeyId = keys.KeyId, }
                 );
 
-                return Results.Json(new { keys = new[] { jwk } });
+                return Results.Json(new { keys = new[] { jwk, }, });
             }
         );
 
         return app;
+    }
+
+    private static WebApplicationBuilder AddLogging(this WebApplicationBuilder builder)
+    {
+        const string logMessageTemplate =
+            "[{Timestamp:HH:mm:ss.fff}] {Level:u3} [{SourceContext}] {Message:lj}{NewLine}{Exception}";
+
+        var loggerConfig = new LoggerConfiguration()
+                           .MinimumLevel.Information()
+                           .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                           .Enrich.FromLogContext()
+                           .WriteTo.Console(outputTemplate: logMessageTemplate);
+
+        Log.Logger = loggerConfig.CreateLogger();
+
+        builder.Logging.ClearProviders();
+        builder.Logging.AddSerilog();
+
+        return builder;
+    }
+
+    private static IServiceCollection AddTelemetry(this IServiceCollection services)
+    {
+        services
+            .AddOpenTelemetry()
+            .WithMetrics(metrics => metrics
+                                    .AddAspNetCoreInstrumentation()
+                                    .AddPrometheusExporter()
+            );
+
+        return services;
     }
 }

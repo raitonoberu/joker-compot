@@ -12,7 +12,7 @@ public sealed class JwtTokenIssuer(IJwtKeyStore keyStore) : IJwtTokenIssuer
     {
         var key = new RsaSecurityKey(_keyStore.Rsa)
         {
-            KeyId = _keyStore.KeyId
+            KeyId = _keyStore.KeyId,
         };
 
         var credentials = new SigningCredentials(
@@ -21,9 +21,8 @@ public sealed class JwtTokenIssuer(IJwtKeyStore keyStore) : IJwtTokenIssuer
         );
 
         var token = new JwtSecurityToken(
-            issuer: "http://users-service",
-            audience: "internal",
-            claims:
+            "http://users-service",
+            "internal",
             [
                 new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             ],

@@ -1,4 +1,3 @@
-using UsersService.Data;
 using UsersService.Data.Entities;
 
 namespace UsersService.Repositories;

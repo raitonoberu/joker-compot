@@ -1,7 +1,7 @@
 ﻿using Grpc.Net.Client;
 using UsersService.Protos;
 
-var channel = GrpcChannel.ForAddress("http://localhost:42069");
+var channel = GrpcChannel.ForAddress("http://localhost:5000");
 var client = new AuthService.AuthServiceClient(channel);
 
 var response1 = client.Register(new RegisterRequest { Email = "joker@mail.ru", Password = "j0k3r", });
