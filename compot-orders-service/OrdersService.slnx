@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="OrdersService.Tests\OrdersService.Tests.csproj" Type="Classic C#" />
+  <Project Path="OrdersService\OrdersService.csproj" />
+</Solution>
