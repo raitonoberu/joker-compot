@@ -1,0 +1,59 @@
+﻿syntax = "proto3";
+import "categories.proto";
+
+package products.v1;
+
+option csharp_namespace = "ProductsService.Protos";
+
+service ProductService {
+  rpc GetProduct (GetProductRequest) returns (ProductResponse);
+  rpc ListProducts (ListProductsRequest) returns (ListProductsResponse);
+  rpc CreateProduct (CreateProductRequest) returns (ProductResponse);
+  rpc UpdateProduct (UpdateProductRequest) returns (ProductResponse);
+  rpc DeleteProduct (DeleteProductRequest) returns (ProductResponse);
+}
+
+message ProductResponse {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  categories.CategoryResponse category = 5;
+  int32 stock_quantity = 6;
+}
+
+message ListProductsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  optional string text = 3;
+  optional string categoryId = 4;
+}
+
+message ListProductsResponse {
+  repeated ProductResponse products = 1;
+}
+
+message CreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  string category_id = 4;
+  int32 stock_quantity = 5;
+}
+
+message UpdateProductRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string category_id = 5;
+  int32 stock_quantity = 6;
+}
+
+message GetProductRequest {
+  string id = 1;
+}
+
+message DeleteProductRequest {
+  string id = 1;
+}

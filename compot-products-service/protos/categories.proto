@@ -1,0 +1,48 @@
+﻿syntax = "proto3";
+
+package categories;
+
+option csharp_namespace = "ProductsService.Protos";
+
+service CategoryService {
+  rpc GetCategory (GetCategoryRequest) returns (CategoryResponse);
+  rpc ListCategories (ListCategoriesRequest) returns (ListCategoriesResponse);
+  rpc CreateCategory (CreateCategoryRequest) returns (CategoryResponse);
+  rpc DeleteCategory (DeleteCategoryRequest) returns (CategoryResponse);
+  rpc UpdateCategory (UpdateCategoryRequest) returns (CategoryResponse);
+}
+
+message CreateCategoryRequest {
+  string name = 1;
+  string slug = 2;
+}
+
+message GetCategoryRequest {
+  string id = 1;
+}
+
+message DeleteCategoryRequest {
+  string id = 1;
+}
+
+message UpdateCategoryRequest {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message ListCategoriesRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+  optional string text = 3;
+}
+
+message CategoryResponse {
+  string id = 1;
+  string name = 2;
+  string slug = 3;
+}
+
+message ListCategoriesResponse {
+  repeated CategoryResponse categories = 1;
+}
