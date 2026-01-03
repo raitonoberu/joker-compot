@@ -1,7 +1,12 @@
-using Ocelot.DependencyInjection;
-using Ocelot.Middleware;
 using Serilog;
 using CompotGateway.Extensions;
+using CompotGateway.Services;
+using CompotGateway.Middleware;
+using UsersService.Protos;
+using ProductsService.Protos;
+using System.Threading.RateLimiting;
+using Microsoft.OpenApi;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration().ConfigureBootstrapLogger().CreateBootstrapLogger();
@@ -9,23 +14,100 @@ try
 {
     Log.Information("Starting application");
     builder.AddOpenTelemetry().AddSerilog();
+
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        options.InstanceName = "CompotGateway_";
+    });
+
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        {
+            return RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: context.User.Identity?.Name ?? context.Request.Headers.Host.ToString(),
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    AutoReplenishment = true,
+                    PermitLimit = 100,
+                    QueueLimit = 0,
+                    Window = TimeSpan.FromMinutes(1)
+                });
+        });
+        options.OnRejected = async (context, token) =>
+        {
+            context.HttpContext.Response.StatusCode = 429;
+            await context.HttpContext.Response.WriteAsync("Too many requests. Please try again later.", cancellationToken: token);
+        };
+    });
+
+    builder.Services.AddGrpcClient<InfoService.InfoServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Users"]))
+        .AddStandardResilienceHandler();
+    builder.Services.AddGrpcClient<AuthService.AuthServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Users"]))
+        .AddStandardResilienceHandler();
+    builder.Services.AddGrpcClient<OrdersService.Protos.OrdersService.OrdersServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Orders"]))
+        .AddStandardResilienceHandler();
+    builder.Services.AddGrpcClient<ProductService.ProductServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Products"]))
+        .AddStandardResilienceHandler();
+
+    builder.Services.AddScoped<ProfileAggregator>();
+
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
+
     builder.Services
-        .AddOpenApi()
+        .AddControllers();
+    builder.Services
+        .AddOpenApi("v1", options =>
+        {
+            options.AddDocumentTransformer(async (document, _, _) =>
+            {
+                document.Info = new OpenApiInfo
+                {
+                    Title = "Compot API",
+                    Version = "v1"
+                };
+
+                document.Components ??= new OpenApiComponents();
+
+                document.Components.SecuritySchemes ??= new Dictionary<string, IOpenApiSecurityScheme>();
+                document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Description = "JWT Authorization header using the Bearer scheme",
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.ApiKey
+                };
+                document.Security ??= new List<OpenApiSecurityRequirement>();
+                document.Security.Add(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecuritySchemeReference("Bearer"),
+                        []
+                    }
+                });
+                await Task.CompletedTask;
+            });
+        })
         .AddCors()
         .AddCustomJwt(builder.Configuration);
-    builder.Configuration.AddOcelot();
-    builder.Services.AddOcelot(builder.Configuration);
-
     var app = builder.Build();
 
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
+        app.MapScalarApiReference();
     }
 
     app.UseCors();
     app.UseAuthentication();
-    await app.UseOcelot();
+    app.UseAuthorization();
+    app.UseRateLimiter();
+    app.UseExceptionHandler();
+
+    app.MapControllers();
+
     await app.RunAsync();
 }
 catch (Exception ex)
@@ -35,5 +117,5 @@ catch (Exception ex)
 }
 finally
 {
-    Log.CloseAndFlush();
+    await Log.CloseAndFlushAsync();
 }
