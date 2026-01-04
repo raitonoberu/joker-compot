@@ -34,11 +34,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Protobuf Include="../../compot-users-service/protos/info.proto" GrpcServices="Client" />
-        <Protobuf Include="../../compot-users-service/protos/auth.proto" GrpcServices="Client" />
-        <Protobuf Include="../../compot-orders-service/protos/orders.proto" GrpcServices="Client" />
-        <Protobuf Include="../../compot-products-service/protos/products.proto" GrpcServices="Client" />
-        <Protobuf Include="../../compot-products-service/protos/categories.proto" GrpcServices="Client" />
+        <Protobuf Include="../protos/info.proto" GrpcServices="Client" />
+        <Protobuf Include="../protos/auth.proto" GrpcServices="Client" />
+        <Protobuf Include="../protos/orders.proto" GrpcServices="Client" />
+        <Protobuf Include="../protos/products.proto" GrpcServices="Client" />
+        <Protobuf Include="../protos/categories.proto" GrpcServices="Client" />
     </ItemGroup>
 
 </Project>

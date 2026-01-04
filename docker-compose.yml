@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+
+  users:
+    build:
+      context: ./compot-users-service
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Database=compot-users;Username=postgres;Password=postgres
+      - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:5010
+      - Kestrel__Endpoints__Http__Url=http://0.0.0.0:5011
+    ports:
+      - "5010:5010"
+      - "5011:5011"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  orders:
+    build:
+      context: ./compot-orders-service
+      dockerfile: OrdersService/Dockerfile
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Database=compot-orders;Username=postgres;Password=postgres
+      - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:6000
+      - Kestrel__Endpoints__Http__Url=http://0.0.0.0:6001
+    ports:
+      - "6000:6000"
+      - "6001:6001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  products:
+    build:
+      context: ./compot-products-service
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__Default=Host=postgres;Database=compot-products;Username=postgres;Password=postgres
+      - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:7000
+      - Kestrel__Endpoints__Http__Url=http://0.0.0.0:7001
+    ports:
+      - "7000:7000"
+      - "7001:7001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  gateway:
+    build:
+      context: ./compot-gateway
+      dockerfile: Dockerfile
+    environment:
+      - ConnectionStrings__Redis=redis:6379
+      - Services__Users=http://users:5011
+      - Services__Orders=http://orders:6001
+      - Services__Products=http://products:7001
+      - Auth__OpenIdConfigUrl=http://users:5011/.well-known/openid-configuration
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    depends_on:
+      - redis
+      - users
+      - orders
+      - products

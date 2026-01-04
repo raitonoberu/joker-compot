@@ -1,0 +1,59 @@
+﻿syntax = "proto3";
+
+package orders.v1;
+
+option csharp_namespace = "OrdersService.Protos";
+
+service OrdersService {
+  rpc CreateOrder (CreateOrderRequest) returns (OrderResponse);
+  rpc GetOrder (GetOrderRequest) returns (OrderResponse);
+  rpc GetUserOrders (GetUserOrdersRequest) returns (OrdersResponse);
+  rpc UpdateOrderStatus (UpdateOrderStatusRequest) returns (OrderResponse);
+}
+
+message CreateOrderRequest {
+  string user_id = 1;
+  repeated OrderItem items = 2;
+}
+
+message GetOrderRequest {
+  string order_id = 1;
+}
+
+message GetUserOrdersRequest {
+  string user_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message UpdateOrderStatusRequest {
+  string order_id = 1;
+  OrderStatus status = 2;
+}
+
+message OrderItem {
+  string product_id = 1;
+  int32 quantity = 2;
+  double price = 3;
+}
+
+message OrderResponse {
+  string id = 1;
+  string user_id = 2;
+  repeated OrderItem items = 3;
+  double total_price = 4;
+  OrderStatus status = 5;
+  string created_at = 6;
+}
+
+message OrdersResponse {  
+  repeated OrderResponse orders = 1;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING = 1;
+  ORDER_STATUS_PAID = 2;
+  ORDER_STATUS_SHIPPED = 3;
+  ORDER_STATUS_CANCELLED = 4;
+}
