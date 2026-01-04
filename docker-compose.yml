@@ -27,6 +27,8 @@ services:
       - ConnectionStrings__Default=Host=postgres;Database=compot-users;Username=postgres;Password=postgres
       - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:5010
       - Kestrel__Endpoints__Http__Url=http://0.0.0.0:5011
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - OTEL_SERVICE_NAME=users-service
     ports:
       - "5010:5010"
       - "5011:5011"
@@ -42,6 +44,8 @@ services:
       - ConnectionStrings__Default=Host=postgres;Database=compot-orders;Username=postgres;Password=postgres
       - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:6000
       - Kestrel__Endpoints__Http__Url=http://0.0.0.0:6001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - OTEL_SERVICE_NAME=orders-service
     ports:
       - "6000:6000"
       - "6001:6001"
@@ -57,6 +61,8 @@ services:
       - ConnectionStrings__Default=Host=postgres;Database=compot-products;Username=postgres;Password=postgres
       - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:7000
       - Kestrel__Endpoints__Http__Url=http://0.0.0.0:7001
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - OTEL_SERVICE_NAME=products-service
     ports:
       - "7000:7000"
       - "7001:7001"
@@ -74,6 +80,8 @@ services:
       - Services__Orders=http://orders:6001
       - Services__Products=http://products:7001
       - Auth__OpenIdConfigUrl=http://users:5011/.well-known/openid-configuration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
+      - OTEL_SERVICE_NAME=gateway
     ports:
       - "8080:8080"
       - "8081:8081"
@@ -82,3 +90,13 @@ services:
       - users
       - orders
       - products
+
+  lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3000:3000"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
