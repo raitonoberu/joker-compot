@@ -50,6 +50,8 @@ try
         .AddStandardResilienceHandler();
     builder.Services.AddGrpcClient<ProductService.ProductServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Products"]))
         .AddStandardResilienceHandler();
+    builder.Services.AddGrpcClient<CategoryService.CategoryServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Products"]))
+        .AddStandardResilienceHandler();
 
     builder.Services.AddScoped<ProfileAggregator>();
 

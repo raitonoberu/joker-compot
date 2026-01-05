@@ -71,8 +71,8 @@ public class CategoriesGrpcService(
         try
         {
             var categories = await categoryRepository.GetAsync(
-                request.Limit,
                 request.Offset,
+                request.Limit,
                 request.Text,
                 context.CancellationToken);
             var response = new ListCategoriesResponse();
