@@ -8,6 +8,7 @@ using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using StackExchange.Redis;
+using Microsoft.Extensions.Http.Resilience;
 
 var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration().ConfigureBootstrapLogger().CreateBootstrapLogger();
@@ -45,16 +46,24 @@ try
         };
     });
 
+    Action<HttpStandardResilienceOptions> resilienceOptions = options =>
+    {
+        options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+        options.CircuitBreaker.FailureRatio = 0.1;
+        options.CircuitBreaker.MinimumThroughput = 3;
+        options.CircuitBreaker.BreakDuration = TimeSpan.FromSeconds(30);
+    };
+
     builder.Services.AddGrpcClient<InfoService.InfoServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Users"]))
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(resilienceOptions);
     builder.Services.AddGrpcClient<AuthService.AuthServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Users"]))
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(resilienceOptions);
     builder.Services.AddGrpcClient<OrdersService.Protos.OrdersService.OrdersServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Orders"]))
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(resilienceOptions);
     builder.Services.AddGrpcClient<ProductService.ProductServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Products"]))
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(resilienceOptions);
     builder.Services.AddGrpcClient<CategoryService.CategoryServiceClient>(o => o.Address = new Uri(builder.Configuration["Services:Products"]))
-        .AddStandardResilienceHandler();
+        .AddStandardResilienceHandler(resilienceOptions);
 
     builder.Services.AddScoped<ProfileAggregator>();
 
