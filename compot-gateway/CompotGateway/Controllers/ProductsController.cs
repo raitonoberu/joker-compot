@@ -30,10 +30,10 @@ public class ProductsController : ControllerBase
         var request = new ListProductsRequest
         {
             Limit = limit,
-            Offset = offset,
-            Text = text,
-            CategoryId = categoryId
+            Offset = offset
         };
+        if (!string.IsNullOrEmpty(text)) request.Text = text;
+        if (!string.IsNullOrEmpty(categoryId)) request.CategoryId = text;
         var response = await _productClient.ListProductsAsync(request, cancellationToken: cancellationToken);
         return Ok(response);
     }

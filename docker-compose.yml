@@ -76,9 +76,9 @@ services:
       dockerfile: Dockerfile
     environment:
       - ConnectionStrings__Redis=redis:6379
-      - Services__Users=http://users:5011
-      - Services__Orders=http://orders:6001
-      - Services__Products=http://products:7001
+      - Services__Users=http://users:5010
+      - Services__Orders=http://orders:6000
+      - Services__Products=http://products:7000
       - Auth__OpenIdConfigUrl=http://users:5011/.well-known/openid-configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - OTEL_SERVICE_NAME=gateway
