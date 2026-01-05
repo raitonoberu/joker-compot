@@ -4,8 +4,6 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
     volumes:
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
@@ -25,13 +23,10 @@ services:
       dockerfile: Dockerfile
     environment:
       - ConnectionStrings__Default=Host=postgres;Database=compot-users;Username=postgres;Password=postgres
-      - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:5010
-      - Kestrel__Endpoints__Http__Url=http://0.0.0.0:5011
+      - Kestrel__Endpoints__Grpc__Url=http://0.0.0.0:5000
+      - Kestrel__Endpoints__Http__Url=http://0.0.0.0:5001
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - OTEL_SERVICE_NAME=users-service
-    ports:
-      - "5010:5010"
-      - "5011:5011"
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,9 +41,6 @@ services:
       - Kestrel__Endpoints__Http__Url=http://0.0.0.0:6001
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - OTEL_SERVICE_NAME=orders-service
-    ports:
-      - "6000:6000"
-      - "6001:6001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,9 +55,6 @@ services:
       - Kestrel__Endpoints__Http__Url=http://0.0.0.0:7001
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - OTEL_SERVICE_NAME=products-service
-    ports:
-      - "7000:7000"
-      - "7001:7001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -76,10 +65,10 @@ services:
       dockerfile: Dockerfile
     environment:
       - ConnectionStrings__Redis=redis:6379
-      - Services__Users=http://users:5010
+      - Services__Users=http://users:5000
       - Services__Orders=http://orders:6000
       - Services__Products=http://products:7000
-      - Auth__OpenIdConfigUrl=http://users:5011/.well-known/openid-configuration
+      - Auth__OpenIdConfigUrl=http://users:5001/.well-known/openid-configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4317
       - OTEL_SERVICE_NAME=gateway
     ports:
@@ -95,8 +84,6 @@ services:
     image: grafana/otel-lgtm:latest
     ports:
       - "3000:3000"
-      - "4317:4317"
-      - "4318:4318"
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
