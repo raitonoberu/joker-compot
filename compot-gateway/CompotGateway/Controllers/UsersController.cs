@@ -1,4 +1,4 @@
-using CompotGateway.Services;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using UsersService.Protos;
@@ -28,6 +28,19 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserResponse>> GetUser(string id, CancellationToken cancellationToken)
     {
         var response = await _infoClient.GetUserAsync(new GetUserRequest { UserId = id },
+            cancellationToken: cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpGet("me")]
+    [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UserResponse>> GetAuthenticatedUser(CancellationToken cancellationToken)
+    {
+        var userId = HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        var response = await _infoClient.GetUserAsync(
+            new GetUserRequest { UserId = userId },
             cancellationToken: cancellationToken);
         return Ok(response);
     }
