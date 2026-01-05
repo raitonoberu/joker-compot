@@ -6,9 +6,6 @@ builder.SetupAppServices();
 var application = builder.Build();
 application.MigrateDatabase();
 application.SetupAppGrpcServices();
-
-application
-    .UseHttpLogging()
-    .UseOpenTelemetryPrometheusScrapingEndpoint();
+application.UseHttpLogging();
 
 application.Run();  

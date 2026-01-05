@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog;
 using Serilog.Events;
 using UsersService.Data;
@@ -13,6 +15,10 @@ namespace UsersService;
 
 public static class Setup
 {
+    private static readonly string[] Data = ["id_token"];
+    private static readonly string[] DataArray = ["public"];
+    private static readonly string[] DataArray0 = ["RS256"];
+
     public static void MigrateDatabase(this WebApplication app)
     {
         using var scope = app.Services.CreateScope();
@@ -22,12 +28,12 @@ public static class Setup
 
     public static WebApplicationBuilder SetupAppServices(this WebApplicationBuilder builder)
     {
+        builder.AddOpenTelemetry();
         builder.Services.AddGrpc();
         builder.AddLogging();
 
         builder
             .Services
-            .AddTelemetry()
             .AddHttpLogging()
             .AddScoped<IUsersRepository, UsersRepository>()
             .AddSingleton<IPasswordHasher, BcryptPasswordHasher>()
@@ -45,10 +51,6 @@ public static class Setup
 
         return app;
     }
-
-    private static readonly string[] Data = new[] { "id_token" };
-    private static readonly string[] DataArray = new[] { "public" };
-    private static readonly string[] DataArray0 = new[] { "RS256" };
 
     public static WebApplication SetupAppEndpoints(this WebApplication app)
     {
@@ -108,15 +110,43 @@ public static class Setup
         return builder;
     }
 
-    private static IServiceCollection AddTelemetry(this IServiceCollection services)
+    private static WebApplicationBuilder AddOpenTelemetry(this WebApplicationBuilder builder)
     {
-        services
-            .AddOpenTelemetry()
-            .WithMetrics(metrics => metrics
-                .AddAspNetCoreInstrumentation()
-                .AddPrometheusExporter()
-            );
+        var url = builder.Configuration.GetValue<string>("Otel:OtlpEndpoint") ??
+                  Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
-        return services;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return builder;
+        }
+
+        var endpoint = new Uri(url);
+
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource
+                .AddService(
+                    serviceName: builder.Configuration.GetValue<string>("Otel:ServiceName") ??
+                                 Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ??
+                                 System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown_service"
+                    , serviceInstanceId: Environment.MachineName)
+                .AddAttributes([
+                    new KeyValuePair<string, object>("deployment.environment", builder.Environment.EnvironmentName)
+                ]))
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation()
+                    .AddOtlpExporter(otlpOptions => { otlpOptions.Endpoint = endpoint; });
+            })
+            .WithTracing(tracing =>
+            {
+                tracing.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter(otlpOptions => { otlpOptions.Endpoint = endpoint; });
+            });
+        return builder;
     }
 }

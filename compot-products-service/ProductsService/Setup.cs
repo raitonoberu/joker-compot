@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using ProductsService.Data;
 using ProductsService.Grpc;
 using ProductsService.Repositories;
@@ -20,12 +22,12 @@ public static class Setup
 
     public static void SetupAppServices(this WebApplicationBuilder builder)
     {
+        builder.AddOpenTelemetry();
         builder.Services.AddGrpc();
-        builder.AddLogging();   
+        builder.AddLogging();
 
         builder
             .Services
-            .AddTelemetry()
             .AddHttpLogging()
             .AddScoped<IProductsRepository, ProductsRepository>()
             .AddScoped<ICategoryRepository, CategoryRepository>()
@@ -59,15 +61,43 @@ public static class Setup
         return builder;
     }
 
-    private static IServiceCollection AddTelemetry(this IServiceCollection services)
+    private static WebApplicationBuilder AddOpenTelemetry(this WebApplicationBuilder builder)
     {
-        services
-            .AddOpenTelemetry()
-            .WithMetrics(metrics => metrics
-                                    .AddAspNetCoreInstrumentation()
-                                    .AddPrometheusExporter()
-            );
+        var url = builder.Configuration.GetValue<string>("Otel:OtlpEndpoint") ??
+                  Environment.GetEnvironmentVariable("OTEL_EXPORTER_OTLP_ENDPOINT");
 
-        return services;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return builder;
+        }
+
+        var endpoint = new Uri(url);
+
+        builder.Services.AddOpenTelemetry()
+            .ConfigureResource(resource => resource
+                .AddService(
+                    serviceName: builder.Configuration.GetValue<string>("Otel:ServiceName") ??
+                                 Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ??
+                                 System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown_service"
+                    , serviceInstanceId: Environment.MachineName)
+                .AddAttributes([
+                    new KeyValuePair<string, object>("deployment.environment", builder.Environment.EnvironmentName)
+                ]))
+            .WithMetrics(metrics =>
+            {
+                metrics
+                    .AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation()
+                    .AddOtlpExporter(otlpOptions => { otlpOptions.Endpoint = endpoint; });
+            })
+            .WithTracing(tracing =>
+            {
+                tracing.AddAspNetCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter(otlpOptions => { otlpOptions.Endpoint = endpoint; });
+            });
+        return builder;
     }
 }
