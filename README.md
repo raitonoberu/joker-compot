@@ -13,7 +13,10 @@
 - GRPC транспорт между шлюзом и микросервисами
 
 ## Запуск
-`docker-compose up -d --build`
+```shell
+docker compose up -d --build
+```
+
 
 После выполнения этой команды можно перейти в [Grafana](`http://localhost:3000`) для мониторинга или в [Scalar](`http://localhost:8080`) для выполнения запросов.
 
