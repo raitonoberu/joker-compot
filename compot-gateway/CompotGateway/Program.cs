@@ -7,19 +7,22 @@ using ProductsService.Protos;
 using System.Threading.RateLimiting;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 Log.Logger = new LoggerConfiguration().ConfigureBootstrapLogger().CreateBootstrapLogger();
 try
 {
     Log.Information("Starting application");
+    IConnectionMultiplexer redisConnectionMultiplexer = await ConnectionMultiplexer.ConnectAsync(builder.Configuration.GetConnectionString("Redis"));
+    builder.Services.AddSingleton(redisConnectionMultiplexer);
     builder.AddOpenTelemetry().AddSerilog();
-
     builder.Services.AddStackExchangeRedisCache(options =>
     {
-        options.Configuration = builder.Configuration.GetConnectionString("Redis") ?? "localhost:6379";
+        options.ConnectionMultiplexerFactory = () => Task.FromResult(redisConnectionMultiplexer);
         options.InstanceName = "CompotGateway_";
     });
+
 
     builder.Services.AddRateLimiter(options =>
     {
@@ -96,11 +99,8 @@ try
         .AddCustomJwt(builder.Configuration);
     var app = builder.Build();
 
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapOpenApi();
-        app.MapScalarApiReference();
-    }
+    app.MapOpenApi();
+    app.MapScalarApiReference();
 
     app.UseCors();
     app.UseAuthentication();

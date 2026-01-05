@@ -41,6 +41,7 @@ public static class OpenTelemetryBuilderExtensions
             {
                 tracing.AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
+                    .AddRedisInstrumentation()
                     .AddGrpcClientInstrumentation()
                     .AddOtlpExporter(otlpOptions => { otlpOptions.Endpoint = endpoint; });
             });
